@@ -38,6 +38,18 @@ declare -a TITATI_SIMULATION_PACKAGES=(
     "robot_msgs"
     "titati_description"
 )
+declare -a TITATI_ALL_PACKAGES=(
+    "rl_sar"
+    "robot_joint_controller"
+    "robot_msgs"
+    "titati_description"
+    "titati_can_driver"
+    "titati_system_interfaces"
+    "titati_topics"
+    "titati_power_services"
+    "titati_canfd_gateway"
+    "titati_motor_test"
+)
 
 # ========================
 # Helper Functions
@@ -138,7 +150,11 @@ run_ros_build() {
     SKIPPED_BY_ALLOWLIST=()
 
     # Clean existing symlinks
-    clean_existing_symlinks "${packages[@]}"
+    if [ "$USE_PACKAGE_LINKS" = true ]; then
+        clean_existing_symlinks
+    else
+        clean_existing_symlinks "${packages[@]}"
+    fi
 
     # Detect incompatible artifacts
     detect_incompatible_build_artifacts
@@ -498,7 +514,7 @@ main() {
     local minimal_mode=false
     local cmake_only_mode=false
 
-    ALLOWED_PACKAGES=("${TITATI_SIMULATION_PACKAGES[@]}")
+    ALLOWED_PACKAGES=("${TITATI_ALL_PACKAGES[@]}")
     local -a MINIMAL_TITATI_PACKAGES=(
         "titati_can_driver"
         "titati_system_interfaces"
@@ -554,6 +570,8 @@ main() {
         ALLOWED_PACKAGES=("${resolved_packages[@]}")
         PACKAGE_MANIFEST_OVERRIDES["rl_sar"]="package.ros2.hardware.xml"
     elif [ ${#packages[@]} -eq 0 ]; then
+        USE_PACKAGE_LINKS=true
+        packages=("${TITATI_SIMULATION_PACKAGES[@]}")
         EXCLUDED_PACKAGES=("${TITATI_HARDWARE_PACKAGES[@]}")
     fi
 
