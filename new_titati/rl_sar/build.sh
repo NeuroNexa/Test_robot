@@ -22,6 +22,8 @@ COLCON_EXTRA_ARGS=()
 declare -a CMAKE_EXTRA_ARGS=()
 declare -a EXCLUDED_PACKAGES=()
 declare -A PACKAGE_MANIFEST_OVERRIDES=()
+declare -a ALLOWED_PACKAGES=()
+declare -a SKIPPED_BY_ALLOWLIST=()
 declare -a TITATI_HARDWARE_PACKAGES=(
     "titati_can_driver"
     "titati_system_interfaces"
@@ -29,6 +31,12 @@ declare -a TITATI_HARDWARE_PACKAGES=(
     "titati_power_services"
     "titati_canfd_gateway"
     "titati_motor_test"
+)
+declare -a TITATI_SIMULATION_PACKAGES=(
+    "rl_sar"
+    "robot_joint_controller"
+    "robot_msgs"
+    "titati_description"
 )
 
 # ========================
@@ -60,6 +68,19 @@ print_info() {
     echo -e "${COLOR_INFO}$1${COLOR_RESET}"
 }
 
+is_package_allowed() {
+    local pkg="$1"
+    if [ ${#ALLOWED_PACKAGES[@]} -eq 0 ]; then
+        return 0
+    fi
+    for allowed in "${ALLOWED_PACKAGES[@]}"; do
+        if [[ "$allowed" == "$pkg" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 is_package_excluded() {
     local pkg="$1"
     for excluded in "${EXCLUDED_PACKAGES[@]}"; do
@@ -73,6 +94,9 @@ is_package_excluded() {
 print_excluded_packages() {
     if [ ${#EXCLUDED_PACKAGES[@]} -gt 0 ]; then
         print_info "Skipping packages in current mode: ${EXCLUDED_PACKAGES[*]}"
+    fi
+    if [ ${#SKIPPED_BY_ALLOWLIST[@]} -gt 0 ]; then
+        print_info "Packages outside Titati allowlist skipped: ${SKIPPED_BY_ALLOWLIST[*]}"
     fi
 }
 
@@ -110,6 +134,8 @@ run_ros_build() {
     local package_list=$(IFS=' '; echo "${packages[*]}")
 
     print_header "[Running ROS Build]"
+
+    SKIPPED_BY_ALLOWLIST=()
 
     # Clean existing symlinks
     clean_existing_symlinks "${packages[@]}"
@@ -304,6 +330,12 @@ create_symlinks_for_package() {
         return 1
     fi
 
+    if ! is_package_allowed "$package_name"; then
+        SKIPPED_BY_ALLOWLIST+=("$package_name")
+        print_info "Skipping package $package_name (Titati-only profile)"
+        return 1
+    fi
+
     if is_package_excluded "$package_name"; then
         print_info "Skipping package $package_name due to current build profile"
         return 1
@@ -466,6 +498,7 @@ main() {
     local minimal_mode=false
     local cmake_only_mode=false
 
+    ALLOWED_PACKAGES=("${TITATI_SIMULATION_PACKAGES[@]}")
     local -a MINIMAL_TITATI_PACKAGES=(
         "titati_can_driver"
         "titati_system_interfaces"
@@ -493,8 +526,10 @@ main() {
         USE_PACKAGE_LINKS=true
         COLCON_EXTRA_ARGS+=(--cmake-args -DRL_SAR_HARDWARE_ONLY=ON)
         COLCON_EXTRA_ARGS+=(--cmake-args -DRL_SAR_ENABLE_TITATI_HW=ON)
+        COLCON_EXTRA_ARGS+=(--cmake-args -DRL_SAR_TITATI_ONLY=ON)
         CMAKE_EXTRA_ARGS+=(-DRL_SAR_HARDWARE_ONLY=ON)
         CMAKE_EXTRA_ARGS+=(-DRL_SAR_ENABLE_TITATI_HW=ON)
+        CMAKE_EXTRA_ARGS+=(-DRL_SAR_TITATI_ONLY=ON)
 
         local -a resolved_packages=()
         declare -A seen_packages=()
@@ -516,13 +551,19 @@ main() {
         done
 
         packages=("${resolved_packages[@]}")
+        ALLOWED_PACKAGES=("${resolved_packages[@]}")
         PACKAGE_MANIFEST_OVERRIDES["rl_sar"]="package.ros2.hardware.xml"
     elif [ ${#packages[@]} -eq 0 ]; then
         EXCLUDED_PACKAGES=("${TITATI_HARDWARE_PACKAGES[@]}")
     fi
 
+    if [ "$minimal_mode" = false ]; then
+        COLCON_EXTRA_ARGS+=(--cmake-args -DRL_SAR_TITATI_ONLY=ON)
+    fi
+
     if [ "$cmake_only_mode" = true ]; then
         CMAKE_EXTRA_ARGS+=(-DRL_SAR_ENABLE_TITATI_HW=ON)
+        CMAKE_EXTRA_ARGS+=(-DRL_SAR_TITATI_ONLY=ON)
     fi
 
     # Handle CMake build mode

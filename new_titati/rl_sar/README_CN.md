@@ -115,9 +115,9 @@ sudo ldconfig
 ./build.sh
 ```
 
-默认构建面向本地开发，会编译Gazebo仿真环境与通用ROS接口，并自动跳过Titati相关的硬件驱动与固件依赖。
+默认构建面向本地开发，会编译Titati所需的Gazebo仿真环境与通用ROS接口，并自动跳过其他机器人的包以及Titati的硬件驱动和固件依赖。
 
-若想单独编译某几个包，可以在后面加上包名
+若想单独编译某几个包，可以在后面加上包名（仅支持Titati相关包：`rl_sar`、`robot_msgs`、`robot_joint_controller`、`titati_description`）
 
 ```bash
 ./build.sh package1 package2
@@ -129,7 +129,7 @@ sudo ldconfig
 ./build.sh -c  # or ./build.sh --clean
 ```
 
-如果只需要在Titati机器人上部署硬件栈，可启用精简模式，仅构建Titati所需的ROS接口与硬件驱动，跳过Gazebo仿真和其他机器人的硬件组件：
+如果只需要在Titati机器人上部署硬件栈，可启用精简模式，仅构建Titati所需的ROS接口与硬件驱动，跳过Gazebo仿真和所有其他机器人硬件组件：
 
 ```bash
 ./build.sh -m

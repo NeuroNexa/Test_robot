@@ -5,11 +5,15 @@ set(USE_CMAKE OFF CACHE BOOL "Use Cmake build system")
 message(STATUS "USE_CMAKE: ${USE_CMAKE}")
 option(RL_SAR_HARDWARE_ONLY "Build only the Titati hardware runtime" OFF)
 option(RL_SAR_ENABLE_TITATI_HW "Enable Titati hardware integrations" OFF)
+option(RL_SAR_TITATI_ONLY "Restrict build to Titati robot support" OFF)
 if(RL_SAR_HARDWARE_ONLY)
     message(STATUS "Configuring rl_sar for Titati hardware-only build")
 endif()
 if(RL_SAR_ENABLE_TITATI_HW)
     message(STATUS "Titati hardware integration enabled")
+endif()
+if(RL_SAR_TITATI_ONLY)
+    message(STATUS "Titati-only profile enabled")
 endif()
 if(USE_CMAKE)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -129,53 +133,57 @@ else()
     message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
-# unitree_legged_sdk-3.2
-add_library(unitree_legged_sdk SHARED IMPORTED)
-set_target_properties(unitree_legged_sdk PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/unitree_legged_sdk-3.2/include"
-    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/unitree_legged_sdk-3.2/lib/${UNITREE_LIB}.so"
-)
-set(UNITREE_A1_LIBS Threads::Threads unitree_legged_sdk lcm)
-if($ENV{ROS_DISTRO} MATCHES "foxy|humble")
-    file(GLOB GLOB_UNITREE_LEGGED_SDK "${CMAKE_CURRENT_SOURCE_DIR}/library/unitree_legged_sdk-3.2/lib/${UNITREE_LIB}.so")
-    install(FILES
-        ${GLOB_UNITREE_LEGGED_SDK}
-        DESTINATION lib/
+if(NOT RL_SAR_TITATI_ONLY)
+    # unitree_legged_sdk-3.2
+    add_library(unitree_legged_sdk SHARED IMPORTED)
+    set_target_properties(unitree_legged_sdk PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/unitree_legged_sdk-3.2/include"
+        IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/unitree_legged_sdk-3.2/lib/${UNITREE_LIB}.so"
     )
+    set(UNITREE_A1_LIBS Threads::Threads unitree_legged_sdk lcm)
+    if($ENV{ROS_DISTRO} MATCHES "foxy|humble")
+        file(GLOB GLOB_UNITREE_LEGGED_SDK "${CMAKE_CURRENT_SOURCE_DIR}/library/unitree_legged_sdk-3.2/lib/${UNITREE_LIB}.so")
+        install(FILES
+            ${GLOB_UNITREE_LEGGED_SDK}
+            DESTINATION lib/
+        )
+    endif()
 endif()
 
 # unitree_sdk2-2.0.0
-set(BUILD_EXAMPLES OFF CACHE BOOL "Disable examples build for unitree_sdk2" FORCE)
-add_subdirectory(library/thirdparty/unitree_sdk2-2.0.0)
+if(NOT RL_SAR_TITATI_ONLY)
+    set(BUILD_EXAMPLES OFF CACHE BOOL "Disable examples build for unitree_sdk2" FORCE)
+    add_subdirectory(library/thirdparty/unitree_sdk2-2.0.0)
 
-# l4w4_sdk
-add_library(l4w4_sdk INTERFACE)
-target_include_directories(l4w4_sdk INTERFACE
-    library/thirdparty/l4w4_sdk
-)
-target_link_libraries(l4w4_sdk INTERFACE Threads::Threads)
+    # l4w4_sdk
+    add_library(l4w4_sdk INTERFACE)
+    target_include_directories(l4w4_sdk INTERFACE
+        library/thirdparty/l4w4_sdk
+    )
+    target_link_libraries(l4w4_sdk INTERFACE Threads::Threads)
 
-# Lite3_MotionSDK
-add_library(lite3_motionsdk SHARED IMPORTED)
-set_target_properties(lite3_motionsdk PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/Lite3_MotionSDK/include"
-    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/Lite3_MotionSDK/lib/libdeeprobotics_legged_sdk_${ARCH_DIR}.so"
-)
-set(LITE3_REAL_LIBS Threads::Threads lite3_motionsdk)
-if($ENV{ROS_DISTRO} MATCHES "foxy|humble")
-    file(GLOB GLOB_LITE3_SDK_SO "${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/Lite3_MotionSDK/lib/libdeeprobotics_legged_sdk_${ARCH_DIR}.so")
-    install(FILES
-        ${GLOB_LITE3_SDK_SO}
-        DESTINATION lib/
+    # Lite3_MotionSDK
+    add_library(lite3_motionsdk SHARED IMPORTED)
+    set_target_properties(lite3_motionsdk PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/Lite3_MotionSDK/include"
+        IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/Lite3_MotionSDK/lib/libdeeprobotics_legged_sdk_${ARCH_DIR}.so"
+    )
+    set(LITE3_REAL_LIBS Threads::Threads lite3_motionsdk)
+    if($ENV{ROS_DISTRO} MATCHES "foxy|humble")
+        file(GLOB GLOB_LITE3_SDK_SO "${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/Lite3_MotionSDK/lib/libdeeprobotics_legged_sdk_${ARCH_DIR}.so")
+        install(FILES
+            ${GLOB_LITE3_SDK_SO}
+            DESTINATION lib/
+        )
+    endif()
+
+    # Retroid Gamepad
+    set(GAMEPAD_SRC
+        ${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/gamepad/src/gamepad.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/gamepad/src/retroid_gamepad.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/gamepad/src/udp_receiver.cpp
     )
 endif()
-
-# Retroid Gamepad
-set(GAMEPAD_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/gamepad/src/gamepad.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/gamepad/src/retroid_gamepad.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/gamepad/src/udp_receiver.cpp
-)
 
 if(NOT USE_CMAKE)
     if($ENV{ROS_DISTRO} MATCHES "noetic")
@@ -256,7 +264,7 @@ if(NOT USE_CMAKE AND NOT RL_SAR_HARDWARE_ONLY)
     endif()
 endif()
 
-if(NOT RL_SAR_HARDWARE_ONLY)
+if(NOT RL_SAR_HARDWARE_ONLY AND NOT RL_SAR_TITATI_ONLY)
     add_executable(rl_real_a1 src/rl_real_a1.cpp)
     target_link_libraries(rl_real_a1
         ${UNITREE_A1_LIBS}
@@ -277,7 +285,7 @@ if(NOT RL_SAR_HARDWARE_ONLY)
     endif()
 endif()
 
-if(NOT RL_SAR_HARDWARE_ONLY)
+if(NOT RL_SAR_HARDWARE_ONLY AND NOT RL_SAR_TITATI_ONLY)
     add_executable(rl_real_lite3
         src/rl_real_lite3.cpp
         ${GAMEPAD_SRC}
@@ -304,7 +312,7 @@ if(NOT RL_SAR_HARDWARE_ONLY)
     endif()
 endif()
 
-if(NOT RL_SAR_HARDWARE_ONLY)
+if(NOT RL_SAR_HARDWARE_ONLY AND NOT RL_SAR_TITATI_ONLY)
     add_executable(rl_real_go2 src/rl_real_go2.cpp)
     target_link_libraries(rl_real_go2
         unitree_sdk2
@@ -325,7 +333,7 @@ if(NOT RL_SAR_HARDWARE_ONLY)
     endif()
 endif()
 
-if(NOT RL_SAR_HARDWARE_ONLY)
+if(NOT RL_SAR_HARDWARE_ONLY AND NOT RL_SAR_TITATI_ONLY)
     add_executable(rl_real_g1 src/rl_real_g1.cpp)
     target_link_libraries(rl_real_g1
         unitree_sdk2
@@ -346,7 +354,7 @@ if(NOT RL_SAR_HARDWARE_ONLY)
     endif()
 endif()
 
-if(NOT RL_SAR_HARDWARE_ONLY)
+if(NOT RL_SAR_HARDWARE_ONLY AND NOT RL_SAR_TITATI_ONLY)
     add_executable(rl_real_l4w4 src/rl_real_l4w4.cpp)
     target_link_libraries(rl_real_l4w4
         l4w4_sdk
