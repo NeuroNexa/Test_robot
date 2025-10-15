@@ -145,6 +145,10 @@ If simulation is not needed and you only want to run on the robot without ROS, y
 ./build.sh --cmake
 ```
 
+> [!TIP]
+> The build helper exports `RL_SAR_FORCE_TITATI_ONLY`, `RL_SAR_FORCE_HARDWARE_ONLY`, and `RL_SAR_FORCE_ENABLE_TITATI_HW` so that the `rl_sar` CMake switches align with the selected profile.<br/>
+> You can override the defaults by exporting these environment variables yourself before running the script (accepted values include `ON/OFF`, `TRUE/FALSE`, `YES/NO`, or `1/0`).
+
 For detailed usage instructions, you can check them via `./build.sh -h`:
 
 ```bash

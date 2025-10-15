@@ -141,6 +141,10 @@ sudo ldconfig
 ./build.sh --cmake
 ```
 
+> [!TIP]
+> 构建脚本会通过环境变量 `RL_SAR_FORCE_TITATI_ONLY`、`RL_SAR_FORCE_HARDWARE_ONLY` 和 `RL_SAR_FORCE_ENABLE_TITATI_HW` 自动向 `rl_sar` 传递对应的 CMake 选项。<br/>
+> 如果需要手动覆盖这些行为，可以在执行脚本前导出上述环境变量（接受 `ON/OFF`、`TRUE/FALSE`、`YES/NO`、`1/0` 等值）。
+
 详细的使用说明可以通过`./build.sh -h`查看
 
 ```bash

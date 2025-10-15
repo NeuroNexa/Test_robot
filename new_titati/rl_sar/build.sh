@@ -514,6 +514,11 @@ main() {
     local minimal_mode=false
     local cmake_only_mode=false
 
+    unset RL_SAR_FORCE_HARDWARE_ONLY
+    unset RL_SAR_FORCE_ENABLE_TITATI_HW
+    unset RL_SAR_FORCE_TITATI_ONLY
+    export RL_SAR_FORCE_TITATI_ONLY=ON
+
     ALLOWED_PACKAGES=("${TITATI_ALL_PACKAGES[@]}")
     local -a MINIMAL_TITATI_PACKAGES=(
         "titati_can_driver"
@@ -540,12 +545,10 @@ main() {
 
     if [ "$minimal_mode" = true ]; then
         USE_PACKAGE_LINKS=true
-        COLCON_EXTRA_ARGS+=(--cmake-args -DRL_SAR_HARDWARE_ONLY=ON)
-        COLCON_EXTRA_ARGS+=(--cmake-args -DRL_SAR_ENABLE_TITATI_HW=ON)
-        COLCON_EXTRA_ARGS+=(--cmake-args -DRL_SAR_TITATI_ONLY=ON)
+        export RL_SAR_FORCE_HARDWARE_ONLY=ON
+        export RL_SAR_FORCE_ENABLE_TITATI_HW=ON
         CMAKE_EXTRA_ARGS+=(-DRL_SAR_HARDWARE_ONLY=ON)
         CMAKE_EXTRA_ARGS+=(-DRL_SAR_ENABLE_TITATI_HW=ON)
-        CMAKE_EXTRA_ARGS+=(-DRL_SAR_TITATI_ONLY=ON)
 
         local -a resolved_packages=()
         declare -A seen_packages=()
@@ -573,10 +576,6 @@ main() {
         USE_PACKAGE_LINKS=true
         packages=("${TITATI_SIMULATION_PACKAGES[@]}")
         EXCLUDED_PACKAGES=("${TITATI_HARDWARE_PACKAGES[@]}")
-    fi
-
-    if [ "$minimal_mode" = false ]; then
-        COLCON_EXTRA_ARGS+=(--cmake-args -DRL_SAR_TITATI_ONLY=ON)
     fi
 
     if [ "$cmake_only_mode" = true ]; then
