@@ -20,6 +20,16 @@ PACKAGE_SYMLINK_ROOT="src/.ros_package_links"
 USE_PACKAGE_LINKS=false
 COLCON_EXTRA_ARGS=()
 declare -a CMAKE_EXTRA_ARGS=()
+declare -a EXCLUDED_PACKAGES=()
+declare -A PACKAGE_MANIFEST_OVERRIDES=()
+declare -a TITATI_HARDWARE_PACKAGES=(
+    "titati_can_driver"
+    "titati_system_interfaces"
+    "titati_topics"
+    "titati_power_services"
+    "titati_canfd_gateway"
+    "titati_motor_test"
+)
 
 # ========================
 # Helper Functions
@@ -48,6 +58,22 @@ print_error() {
 
 print_info() {
     echo -e "${COLOR_INFO}$1${COLOR_RESET}"
+}
+
+is_package_excluded() {
+    local pkg="$1"
+    for excluded in "${EXCLUDED_PACKAGES[@]}"; do
+        if [[ "$excluded" == "$pkg" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+print_excluded_packages() {
+    if [ ${#EXCLUDED_PACKAGES[@]} -gt 0 ]; then
+        print_info "Skipping packages in current mode: ${EXCLUDED_PACKAGES[*]}"
+    fi
 }
 
 ask_confirmation() {
@@ -98,6 +124,8 @@ run_ros_build() {
         create_symlinks_for_specific_packages "${packages[@]}"
         prepare_package_workspace_symlinks "${packages[@]}"
     fi
+
+    print_excluded_packages
 
     # Execute build
     if [ ${#packages[@]} -eq 0 ]; then
@@ -269,12 +297,39 @@ create_symlinks_for_package() {
     local package_name=$(basename "$package_dir")
     local ros1_manifest="$package_dir/package.ros1.xml"
     local ros2_manifest="$package_dir/package.ros2.xml"
+    local override_manifest="${PACKAGE_MANIFEST_OVERRIDES[$package_name]}"
+    local override_ros_variant=""
 
     if [ ! -d "$package_dir" ]; then
         return 1
     fi
 
+    if is_package_excluded "$package_name"; then
+        print_info "Skipping package $package_name due to current build profile"
+        return 1
+    fi
+
+    if [ -n "$override_manifest" ]; then
+        if [[ "$override_manifest" == *"ros1"* ]]; then
+            override_ros_variant="ros1"
+        elif [[ "$override_manifest" == *"ros2"* ]]; then
+            override_ros_variant="ros2"
+        fi
+        if [[ "$override_ros_variant" == "ros1" && "$ROS_DISTRO" != "noetic" ]]; then
+            override_manifest=""
+        elif [[ "$override_ros_variant" == "ros2" && "$ROS_DISTRO" == "noetic" ]]; then
+            override_manifest=""
+        fi
+    fi
+
     [ -e "$package_dir/package.xml" ] && rm -f "$package_dir/package.xml"
+
+    if [ -n "$override_manifest" ] && [ -f "$package_dir/$override_manifest" ]; then
+        ln -s "$override_manifest" "$package_dir/package.xml"
+        return 0
+    elif [ -n "$override_manifest" ]; then
+        print_warning "Manifest override $override_manifest not found for $package_name, falling back to default manifest"
+    fi
 
     if [[ "$ROS_DISTRO" == "noetic" ]]; then
         if [ -f "$ros1_manifest" ]; then
@@ -391,8 +446,8 @@ show_usage() {
     echo ""
     echo -e "${COLOR_INFO}Options:${COLOR_RESET}"
     echo -e "  -c, --clean      Clean workspace (remove symlinks and build artifacts)"
-    echo -e "  -m, --minimal    Build Titati hardware stack (CMake + minimal ROS packages)"
-    echo -e "      --cmake      Build using CMake only (for hardware deployment)"
+    echo -e "  -m, --minimal    Build Titati ROS + hardware stack (skips Gazebo simulation)"
+    echo -e "      --cmake      Build using CMake only (Titati hardware libraries)"
     echo -e "  -h, --help       Show this help message"
     echo ""
     echo -e "${COLOR_INFO}Examples:${COLOR_RESET}"
@@ -400,8 +455,8 @@ show_usage() {
     echo -e "  $0 package1 package2  # Build specific ROS packages"
     echo -e "  $0 -c                 # Clean all symlinks and build artifacts"
     echo -e "  $0 --clean package1   # Clean specific package and build artifacts"
-    echo -e "  $0 -m                 # Build Titati hardware stack (CMake + minimal ROS)"
-    echo -e "  $0 --cmake            # Build with CMake for hardware deployment"
+    echo -e "  $0 -m                 # Build Titati ROS + hardware stack for on-robot use"
+    echo -e "  $0 --cmake            # Build Titati hardware libraries without ROS"
 }
 
 main() {
@@ -437,7 +492,9 @@ main() {
     if [ "$minimal_mode" = true ]; then
         USE_PACKAGE_LINKS=true
         COLCON_EXTRA_ARGS+=(--cmake-args -DRL_SAR_HARDWARE_ONLY=ON)
+        COLCON_EXTRA_ARGS+=(--cmake-args -DRL_SAR_ENABLE_TITATI_HW=ON)
         CMAKE_EXTRA_ARGS+=(-DRL_SAR_HARDWARE_ONLY=ON)
+        CMAKE_EXTRA_ARGS+=(-DRL_SAR_ENABLE_TITATI_HW=ON)
 
         local -a resolved_packages=()
         declare -A seen_packages=()
@@ -459,6 +516,13 @@ main() {
         done
 
         packages=("${resolved_packages[@]}")
+        PACKAGE_MANIFEST_OVERRIDES["rl_sar"]="package.ros2.hardware.xml"
+    elif [ ${#packages[@]} -eq 0 ]; then
+        EXCLUDED_PACKAGES=("${TITATI_HARDWARE_PACKAGES[@]}")
+    fi
+
+    if [ "$cmake_only_mode" = true ]; then
+        CMAKE_EXTRA_ARGS+=(-DRL_SAR_ENABLE_TITATI_HW=ON)
     fi
 
     # Handle CMake build mode

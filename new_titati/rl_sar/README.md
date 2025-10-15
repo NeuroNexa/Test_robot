@@ -115,6 +115,9 @@ Execute the following script in the project root directory to compile the entire
 ./build.sh
 ```
 
+This default build targets desktop development: it wires up the Gazebo simulation world and all generic ROS interfaces while
+skipping Titati-specific hardware drivers and firmware-facing packages.
+
 To compile specific packages individually, you can append the package names:
 
 ```bash
@@ -133,6 +136,9 @@ To build only the Titati hardware stack (used on the real robot) without compili
 ./build.sh -m
 ```
 
+This variant enables the Titati CAN-FD bridge, ROS 2 interfaces and supporting services but omits Gazebo simulation assets and
+other robot hardware drivers so that the deployment footprint fits on the on-board computer.
+
 If simulation is not needed and you only want to run on the robot without ROS, you can compile using CMake (the compiled executables will be in `cmake_build/bin` and libraries in `cmake_build/lib`):
 
 ```bash
@@ -146,8 +152,8 @@ Usage: ./build.sh [OPTIONS] [PACKAGE_NAMES...]
 
 Options:
   -c, --clean      Clean workspace (remove symlinks and build artifacts)
-  -m, --minimal    Build minimal ROS2 packages for Titati hardware
-      --cmake      Build using CMake (for hardware deployment only)
+  -m, --minimal    Build Titati ROS 2 + hardware stack (skips Gazebo simulation and other robot drivers)
+      --cmake      Build using CMake (hardware libraries only, no Gazebo or ROS)
   -h, --help       Show this help message
 
 Examples:

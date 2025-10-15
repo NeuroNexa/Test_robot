@@ -115,6 +115,8 @@ sudo ldconfig
 ./build.sh
 ```
 
+默认构建面向本地开发，会编译Gazebo仿真环境与通用ROS接口，并自动跳过Titati相关的硬件驱动与固件依赖。
+
 若想单独编译某几个包，可以在后面加上包名
 
 ```bash
@@ -127,10 +129,16 @@ sudo ldconfig
 ./build.sh -c  # or ./build.sh --clean
 ```
 
-如果不需要仿真，只在机器人上运行，可以使用CMake进行编译，同时禁用ROS（编译生成的可执行文件在`cmake_build/bin`中，库在`cmake_build/lib`中）
+如果只需要在Titati机器人上部署硬件栈，可启用精简模式，仅构建Titati所需的ROS接口与硬件驱动，跳过Gazebo仿真和其他机器人的硬件组件：
 
 ```bash
-./build.sh -m  # or ./build.sh --cmake
+./build.sh -m
+```
+
+若完全不依赖ROS，只需生成Titati的原生可执行文件与库，可使用CMake模式（生成的可执行文件在`cmake_build/bin`，库在`cmake_build/lib`）：
+
+```bash
+./build.sh --cmake
 ```
 
 详细的使用说明可以通过`./build.sh -h`查看
@@ -140,7 +148,8 @@ Usage: ./build.sh [OPTIONS] [PACKAGE_NAMES...]
 
 Options:
   -c, --clean    Clean workspace (remove symlinks and build artifacts)
-  -m, --cmake    Build using CMake (for hardware deployment only)
+  -m, --minimal  构建Titati ROS 2 + 硬件驱动（跳过Gazebo仿真与其他机器人硬件）
+      --cmake    仅使用CMake构建Titati硬件库（不包含Gazebo与ROS）
   -h, --help     Show this help message
 
 Examples:
@@ -148,7 +157,8 @@ Examples:
   ./build.sh package1 package2  # Build specific ROS packages
   ./build.sh -c                 # Clean all symlinks and build artifacts
   ./build.sh --clean package1   # Clean specific package and build artifacts
-  ./build.sh -m                 # Build with CMake for hardware deployment
+  ./build.sh -m                 # Titati机器人部署使用的精简硬件栈
+  ./build.sh --cmake            # 仅生成Titati硬件相关的CMake构建产物
 ```
 
 > [!TIP]

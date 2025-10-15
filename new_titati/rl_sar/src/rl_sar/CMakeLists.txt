@@ -4,8 +4,12 @@ project(rl_sar VERSION 3.0.0 LANGUAGES CXX)
 set(USE_CMAKE OFF CACHE BOOL "Use Cmake build system")
 message(STATUS "USE_CMAKE: ${USE_CMAKE}")
 option(RL_SAR_HARDWARE_ONLY "Build only the Titati hardware runtime" OFF)
+option(RL_SAR_ENABLE_TITATI_HW "Enable Titati hardware integrations" OFF)
 if(RL_SAR_HARDWARE_ONLY)
     message(STATUS "Configuring rl_sar for Titati hardware-only build")
+endif()
+if(RL_SAR_ENABLE_TITATI_HW)
+    message(STATUS "Titati hardware integration enabled")
 endif()
 if(USE_CMAKE)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -24,7 +28,7 @@ else()
     add_compile_definitions(USE_CMAKE)
 endif()
 
-if(USE_CMAKE)
+if(USE_CMAKE AND RL_SAR_ENABLE_TITATI_HW)
     set(TITATI_CAN_DRIVER_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/library/thirdparty/titati/titati_hardware_support/titati_can_driver")
     add_library(titati_can_driver_hw
         ${TITATI_CAN_DRIVER_ROOT}/src/can_receiver.cpp
@@ -88,7 +92,9 @@ if(NOT USE_CMAKE)
         find_package(rclpy REQUIRED)
         find_package(std_srvs REQUIRED)
         find_package(geometry_msgs REQUIRED)
-        find_package(titati_can_driver REQUIRED)
+        if(RL_SAR_ENABLE_TITATI_HW)
+            find_package(titati_can_driver REQUIRED)
+        endif()
         if(NOT RL_SAR_HARDWARE_ONLY)
             find_package(joint_state_broadcaster REQUIRED)
             find_package(robot_state_publisher REQUIRED)
@@ -361,26 +367,28 @@ if(NOT RL_SAR_HARDWARE_ONLY)
     endif()
 endif()
 
-add_executable(rl_real_titati src/rl_real_titati.cpp)
-target_link_libraries(rl_real_titati
-    rl_sdk
-    observation_buffer
-    yaml-cpp
-)
-if(USE_CMAKE)
-    target_link_libraries(rl_real_titati titati_can_driver_hw)
-endif()
-if(NOT USE_CMAKE)
-    if($ENV{ROS_DISTRO} MATCHES "noetic")
-        target_link_libraries(rl_real_titati ${catkin_LIBRARIES})
-    elseif($ENV{ROS_DISTRO} MATCHES "foxy|humble")
-        ament_target_dependencies(rl_real_titati
-            rclcpp
-            geometry_msgs
-            titati_can_driver
-        )
-        target_link_libraries(rl_real_titati titati_can_driver::titati_can_driver)
-        install(TARGETS rl_real_titati DESTINATION lib/${PROJECT_NAME})
+if(RL_SAR_ENABLE_TITATI_HW)
+    add_executable(rl_real_titati src/rl_real_titati.cpp)
+    target_link_libraries(rl_real_titati
+        rl_sdk
+        observation_buffer
+        yaml-cpp
+    )
+    if(USE_CMAKE)
+        target_link_libraries(rl_real_titati titati_can_driver_hw)
+    endif()
+    if(NOT USE_CMAKE)
+        if($ENV{ROS_DISTRO} MATCHES "noetic")
+            target_link_libraries(rl_real_titati ${catkin_LIBRARIES})
+        elseif($ENV{ROS_DISTRO} MATCHES "foxy|humble")
+            ament_target_dependencies(rl_real_titati
+                rclcpp
+                geometry_msgs
+                titati_can_driver
+            )
+            target_link_libraries(rl_real_titati titati_can_driver::titati_can_driver)
+            install(TARGETS rl_real_titati DESTINATION lib/${PROJECT_NAME})
+        endif()
     endif()
 endif()
 
