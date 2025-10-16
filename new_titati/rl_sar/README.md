@@ -115,7 +115,10 @@ Execute the following script in the project root directory to compile the entire
 ./build.sh
 ```
 
-To compile specific packages individually, you can append the package names:
+This default build targets desktop development: it wires up the Gazebo simulation world and all generic ROS interfaces needed for Titati while
+skipping every other robot package together with Titati's hardware drivers.
+
+To compile specific packages individually, you can append the package names (Titati-only allowlist: `rl_sar`, `robot_msgs`, `robot_joint_controller`, `titati_description`):
 
 ```bash
 ./build.sh package1 package2
@@ -133,11 +136,18 @@ To build only the Titati hardware stack (used on the real robot) without compili
 ./build.sh -m
 ```
 
+This variant enables the Titati CAN-FD bridge, ROS 2 interfaces and supporting services but omits Gazebo simulation assets and
+all non-Titati robot drivers so that the deployment footprint fits on the on-board computer.
+
 If simulation is not needed and you only want to run on the robot without ROS, you can compile using CMake (the compiled executables will be in `cmake_build/bin` and libraries in `cmake_build/lib`):
 
 ```bash
 ./build.sh --cmake
 ```
+
+> [!TIP]
+> The build helper exports `RL_SAR_FORCE_TITATI_ONLY`, `RL_SAR_FORCE_HARDWARE_ONLY`, and `RL_SAR_FORCE_ENABLE_TITATI_HW` so that the `rl_sar` CMake switches align with the selected profile.<br/>
+> You can override the defaults by exporting these environment variables yourself before running the script (accepted values include `ON/OFF`, `TRUE/FALSE`, `YES/NO`, or `1/0`).
 
 For detailed usage instructions, you can check them via `./build.sh -h`:
 
@@ -146,8 +156,8 @@ Usage: ./build.sh [OPTIONS] [PACKAGE_NAMES...]
 
 Options:
   -c, --clean      Clean workspace (remove symlinks and build artifacts)
-  -m, --minimal    Build minimal ROS2 packages for Titati hardware
-      --cmake      Build using CMake (for hardware deployment only)
+  -m, --minimal    Build Titati ROS 2 + hardware stack (skips Gazebo simulation and other robot drivers)
+      --cmake      Build using CMake (hardware libraries only, no Gazebo or ROS)
   -h, --help       Show this help message
 
 Examples:
