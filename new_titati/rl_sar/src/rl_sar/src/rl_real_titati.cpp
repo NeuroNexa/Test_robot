@@ -88,9 +88,9 @@ double RL_Real::PolicyToLegdataPosition(int joint_index, double policy_pos) cons
         }
         case JointKind::Thigh:
         case JointKind::Calf:
-            return IsRearLeg(leg) ? -policy_pos : policy_pos;
+            return policy_pos;
         case JointKind::Wheel:
-            return IsRearLeg(leg) ? -policy_pos : policy_pos;
+            return policy_pos;
         case JointKind::Unknown:
         default:
             return policy_pos;
@@ -99,20 +99,20 @@ double RL_Real::PolicyToLegdataPosition(int joint_index, double policy_pos) cons
 
 double RL_Real::PolicyToLegdataVelocity(int joint_index, double policy_vel) const
 {
-    const LegGroup leg = this->joint_leg_group_[joint_index];
-    return IsRearLeg(leg) ? -policy_vel : policy_vel;
+    (void)joint_index;
+    return policy_vel;
 }
 
 double RL_Real::PolicyToHardwareTorque(int joint_index, double policy_tau) const
 {
-    const LegGroup leg = this->joint_leg_group_[joint_index];
-    return IsRearLeg(leg) ? -policy_tau : policy_tau;
+    (void)joint_index;
+    return policy_tau;
 }
 
 double RL_Real::HardwareToPolicyTorque(int joint_index, double hardware_tau) const
 {
-    const LegGroup leg = this->joint_leg_group_[joint_index];
-    return IsRearLeg(leg) ? -hardware_tau : hardware_tau;
+    (void)joint_index;
+    return hardware_tau;
 }
 
 RL_Real::RL_Real()
@@ -471,7 +471,7 @@ void RL_Real::GetState(RobotState<double>* state)
                 case JointKind::Thigh:
                 case JointKind::Calf:
                 {
-                    policy_position = IsRearLeg(leg_group) ? -legdata_position : legdata_position;
+                    policy_position = legdata_position;
                     break;
                 }
                 case JointKind::Wheel:
@@ -481,7 +481,7 @@ void RL_Real::GetState(RobotState<double>* state)
                     {
                         signed_relative = legdata_position;
                     }
-                    policy_position = IsRearLeg(leg_group) ? -signed_relative : signed_relative;
+                    policy_position = signed_relative;
                     break;
                 }
                 case JointKind::Unknown:
@@ -492,7 +492,7 @@ void RL_Real::GetState(RobotState<double>* state)
                 }
             }
 
-            policy_velocity = IsRearLeg(leg_group) ? -legdata_velocity : legdata_velocity;
+            policy_velocity = legdata_velocity;
             policy_tau = this->HardwareToPolicyTorque(i, raw_tau);
         }
         else
